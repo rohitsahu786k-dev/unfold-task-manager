@@ -1,0 +1,46 @@
+{
+  "version": 2,
+  "buildCommand": "npm run build",
+  "installCommand": "npm install",
+  "env": {
+    "NODE_ENV": "production"
+  },
+  "envPrefix": "NEXT_PUBLIC_",
+  "framework": "nextjs",
+  "functions": {
+    "app/**/*.ts": {
+      "memory": 1024,
+      "maxDuration": 60
+    }
+  },
+  "rewrites": [
+    {
+      "source": "/api/inngest",
+      "destination": "/api/inngest"
+    },
+    {
+      "source": "/api/webhooks/clerk",
+      "destination": "/api/webhooks/clerk"
+    }
+  ],
+  "headers": [
+    {
+      "source": "/api/inngest",
+      "headers": [
+        {
+          "key": "Content-Type",
+          "value": "application/json"
+        }
+      ]
+    },
+    {
+      "source": "/api/webhooks/clerk",
+      "headers": [
+        {
+          "key": "Content-Type",
+          "value": "application/json"
+        }
+      ]
+    }
+  ]
+}

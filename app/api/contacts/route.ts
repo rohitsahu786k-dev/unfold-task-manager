@@ -37,9 +37,11 @@ export async function POST(request: NextRequest) {
         name: body.name,
         email: body.email,
         phone: body.phone || null,
-        position: body.position || null,
+        designation: body.designation || body.position || null,
         department: body.department || null,
         clientId: body.clientId || null,
+        notes: body.notes || null,
+        agencyId: body.agencyId || null,
       },
     });
 

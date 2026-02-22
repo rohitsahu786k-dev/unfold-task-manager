@@ -351,7 +351,16 @@ const sampleTasks = [
   },
 ];
 
-const timesheetData = [];
+const timesheetData: Array<{
+  userId: string;
+  hoursWorked: number;
+  description: string;
+  status: string;
+  date: Date;
+  projectId?: string | null;
+  taskId?: string | null;
+  notes?: string | null;
+}> = [];
 for (let i = 0; i < 30; i++) {
   timesheetData.push({
     userId: 'vikram.desai@unfoldcro.com',

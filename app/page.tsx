@@ -15,26 +15,30 @@ import {
 import { useAuth } from './context/AuthContext';
 import { useTaskComposer } from './context/TaskComposerContext';
 import { getDashboardWidgets } from './utils/permissions';
-import { MOCK_PROJECTS, MOCK_TASKS, MOCK_USERS } from './types/mockData';
 
 interface Project {
-  _id: string;
+  id: string;
+  _id?: string;
   name: string;
   status: string;
+  agencyId?: string;
   agency_id?: string;
   [key: string]: any;
 }
 
 interface Task {
-  _id: string;
+  id: string;
+  _id?: string;
   title: string;
   status: string;
+  assignedTo?: string;
   assigned_to?: string;
   [key: string]: any;
 }
 
 interface User {
-  _id: string;
+  id: string;
+  _id?: string;
   email: string;
   role: string;
   [key: string]: any;
@@ -52,6 +56,7 @@ export default function Dashboard() {
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const isPendingReview = (status: string) => status === 'sent_for_review' || status === 'pending_review';
 
   // Fetch real data from API
   useEffect(() => {
@@ -72,17 +77,16 @@ export default function Dashboard() {
         const taskData = await taskRes.json();
         const userData = await userRes.json();
 
-        setProjects(projectData.length > 0 ? projectData : MOCK_PROJECTS);
-        setTasks(taskData.length > 0 ? taskData : MOCK_TASKS);
-        setUsers(userData.length > 0 ? userData : MOCK_USERS);
+        setProjects(projectData);
+        setTasks(taskData);
+        setUsers(userData);
         setError(null);
       } catch (err) {
         console.error('Error fetching dashboard data:', err);
-        // Fallback to mock data
-        setProjects(MOCK_PROJECTS);
-        setTasks(MOCK_TASKS);
-        setUsers(MOCK_USERS);
-        setError('Using demo data. Database connection may not be available.');
+        setProjects([]);
+        setTasks([]);
+        setUsers([]);
+        setError('Unable to load live database data right now.');
       } finally {
         setLoading(false);
       }
@@ -95,14 +99,14 @@ export default function Dashboard() {
   // Filter data based on user role and permissions
   const getVisibleProjects = () => {
     if (currentUser.role === 'agency_user') {
-      return projects.filter(p => p.agency_id === currentUser.agency_id);
+      return projects.filter(p => (p.agencyId ?? p.agency_id) === currentUser.agency_id);
     }
     return projects;
   };
 
   const getVisibleTasks = () => {
     if (currentUser.role === 'developer') {
-      return tasks.filter(t => t.assigned_to === currentUser.id);
+      return tasks.filter(t => (t.assignedTo ?? t.assigned_to) === currentUser.id);
     }
     return tasks;
   };
@@ -185,13 +189,13 @@ export default function Dashboard() {
             />
             <KPICard
               title="Pending Review"
-              value={tasks.filter(t => t.status === 'sent_for_review').length}
+              value={tasks.filter(t => isPendingReview(t.status)).length}
               icon={<AlertCircle className="h-6 w-6 text-yellow-600" />}
               bgColor="bg-yellow-100"
             />
             <KPICard
               title="Team Members"
-              value={5}
+              value={users.length}
               icon={<Users className="h-6 w-6 text-purple-600" />}
               bgColor="bg-purple-100"
             />
@@ -206,7 +210,7 @@ export default function Dashboard() {
                   <div key={proj.id} className="flex items-start gap-4 rounded-lg border border-gray-100 bg-blue-50 p-4">
                     <div className="flex-1">
                       <p className="font-medium text-gray-900">{proj.name}</p>
-                      <p className="text-sm text-gray-600 mt-1">{proj.agency_id}</p>
+                      <p className="text-sm text-gray-600 mt-1">{proj.agencyId ?? proj.agency_id}</p>
                     </div>
                     <button className="px-3 py-1.5 text-sm font-medium text-white bg-blue-600 rounded hover:bg-blue-700 transition-colors">
                       Review
@@ -231,13 +235,13 @@ export default function Dashboard() {
             />
             <KPICard
               title="Tasks Pending Review"
-              value={MOCK_TASKS.filter(t => t.status === 'sent_for_review').length}
+              value={tasks.filter(t => isPendingReview(t.status)).length}
               icon={<AlertCircle className="h-6 w-6 text-yellow-600" />}
               bgColor="bg-yellow-100"
             />
             <KPICard
               title="Active Team Members"
-              value={5}
+              value={users.length}
               icon={<Users className="h-6 w-6 text-purple-600" />}
               bgColor="bg-purple-100"
             />
@@ -275,11 +279,13 @@ export default function Dashboard() {
             <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-md mb-8">
               <h3 className="text-lg font-semibold text-gray-900 mb-4">Tasks Awaiting Approval</h3>
               <div className="space-y-2">
-                {tasks.filter(t => t.status === 'sent_for_review' && approvalStatuses[t.id] === undefined).map(task => (
+                {tasks.filter(t => isPendingReview(t.status) && approvalStatuses[t.id] === undefined).map(task => (
                   <div key={task.id} className="flex items-center justify-between p-3 rounded-lg border border-gray-100 hover:bg-gray-50">
                     <div>
                       <p className="font-medium text-gray-900">{task.title}</p>
-                      <p className="text-xs text-gray-500">By {users.find(u => u._id === task.assigned_to)?.email || 'Unknown'}</p>
+                      <p className="text-xs text-gray-500">
+                        By {users.find(u => (u.id ?? u._id) === (task.assignedTo ?? task.assigned_to))?.email || 'Unknown'}
+                      </p>
                     </div>
                     <button
                       onClick={() => setSelectedApprovalTask(task)}
@@ -289,8 +295,8 @@ export default function Dashboard() {
                     </button>
                   </div>
                 ))}
-                {tasks.filter(t => t.status === 'sent_for_review' && approvalStatuses[t.id] === undefined).length === 0 && 
-                 tasks.filter(t => t.status === 'sent_for_review').length === 0 && (
+                {tasks.filter(t => isPendingReview(t.status) && approvalStatuses[t.id] === undefined).length === 0 &&
+                 tasks.filter(t => isPendingReview(t.status)).length === 0 && (
                   <div className="text-center py-8 text-gray-600">
                     <p>No tasks awaiting approval</p>
                   </div>
@@ -346,7 +352,7 @@ export default function Dashboard() {
                     </div>
                     <span className={`px-2.5 py-1 text-xs font-medium rounded-full ${
                       task.status === 'in_progress' ? 'bg-blue-100 text-blue-700' :
-                      task.status === 'sent_for_review' ? 'bg-yellow-100 text-yellow-700' :
+                      isPendingReview(task.status) ? 'bg-yellow-100 text-yellow-700' :
                       'bg-gray-100 text-gray-700'
                     }`}>
                       {task.status.replace(/_/g, ' ')}
@@ -465,7 +471,7 @@ export default function Dashboard() {
       {selectedApprovalTask && (
         <TaskApprovalModal
           task={selectedApprovalTask}
-          assignedUser={users.find(u => u._id === selectedApprovalTask.assigned_to)}
+          assignedUser={users.find(u => (u.id ?? u._id) === (selectedApprovalTask.assignedTo ?? selectedApprovalTask.assigned_to)) as any}
           isOpen={true}
           onClose={() => setSelectedApprovalTask(null)}
           onApprove={handleApprove}

@@ -38,9 +38,16 @@ export async function POST(request: NextRequest) {
         name: body.name,
         email: body.email,
         phone: body.phone || null,
-        industry: body.industry || null,
+        company: body.company || body.industry || null,
         website: body.website || null,
         address: body.address || null,
+        city: body.city || null,
+        state: body.state || null,
+        zipCode: body.zipCode || null,
+        country: body.country || null,
+        status: body.status || 'active',
+        notes: body.notes || null,
+        agencyId: body.agencyId || null,
       },
     });
 

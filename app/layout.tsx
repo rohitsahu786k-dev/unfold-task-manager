@@ -1,12 +1,5 @@
 import type { Metadata } from "next";
-import {
-  ClerkProvider,
-  SignInButton,
-  SignUpButton,
-  SignedIn,
-  SignedOut,
-  UserButton,
-} from "@clerk/nextjs";
+import { ClerkProvider } from "@clerk/nextjs";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import { Providers } from "./providers";
@@ -35,17 +28,6 @@ export default function RootLayout({
     <ClerkProvider>
       <html lang="en">
         <body className={`${inter.variable} antialiased bg-white text-gray-900`}>
-          <header className="flex justify-end items-center p-4 gap-4 h-16">
-            {/* Show the sign-in and sign-up buttons when the user is signed out */}
-            <SignedOut>
-              <SignInButton />
-              <SignUpButton />
-            </SignedOut>
-            {/* Show the user button when the user is signed in */}
-            <SignedIn>
-              <UserButton />
-            </SignedIn>
-          </header>
           <Providers>
             {children}
           </Providers>

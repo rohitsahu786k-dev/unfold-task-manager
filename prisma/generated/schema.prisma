@@ -1,0 +1,199 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "./generated"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id       String  @id @default(cuid())
+  name     String
+  email    String  @unique
+  phone    String?
+  avatar   String?
+  timezone String?
+  role     String  @default("agency_user") // super_admin, admin, manager, developer, agency_user
+  status   String  @default("active") // active, inactive
+  agencyId String?
+  password String?
+
+  notificationPreferences NotificationPreferences?
+  projects                Project[]                @relation("CreatedBy")
+  tasks                   Task[]                   @relation("AssignedTo")
+  activityLogs            ActivityLog[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model NotificationPreferences {
+  id     String  @id @default(cuid())
+  userId String  @unique
+  email  Boolean @default(true)
+  inApp  Boolean @default(true)
+  slack  Boolean @default(false)
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Project {
+  id            String    @id @default(cuid())
+  name          String
+  agencyId      String
+  clientId      String?
+  status        String    @default("pending_intake") // pending_intake, in_progress, awaiting_review, approved, completed, on_hold
+  type          String?
+  description   String?
+  budget        Float?
+  pricingModel  String? // fixed, hourly, retainer
+  deadline      DateTime?
+  progress      Int       @default(0)
+  internalNotes String?
+  attachments   String[] // JSON array of file paths
+  createdBy     String?
+
+  tasks  Task[]
+  user   User?   @relation("CreatedBy", fields: [createdBy], references: [email], onDelete: SetNull)
+  client Client? @relation(fields: [clientId], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([agencyId])
+  @@index([createdBy])
+  @@index([clientId])
+}
+
+model Task {
+  id                 String    @id @default(cuid())
+  title              String
+  description        String?
+  projectId          String?
+  assignedTo         String? // email of assigned user
+  status             String    @default("not_started") // not_started, in_progress, blocked, pending_review, completed
+  priority           String    @default("medium") // low, medium, high, urgent
+  estimatedHours     Float?
+  actualHours        Float?
+  deadline           DateTime?
+  acceptanceCriteria String?
+  attachments        String[] // JSON array of file paths
+  createdBy          String?
+
+  project  Project? @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  assignee User?    @relation("AssignedTo", fields: [assignedTo], references: [email], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([projectId])
+  @@index([assignedTo])
+}
+
+model Client {
+  id       String  @id @default(cuid())
+  name     String
+  email    String  @unique
+  phone    String?
+  company  String?
+  address  String?
+  city     String?
+  state    String?
+  zipCode  String?
+  country  String?
+  status   String  @default("active") // active, inactive, prospect
+  website  String?
+  notes    String?
+  agencyId String?
+
+  projects Project[]
+  contacts Contact[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([agencyId])
+  @@index([email])
+}
+
+model Contact {
+  id          String  @id @default(cuid())
+  name        String
+  email       String  @unique
+  phone       String?
+  designation String?
+  department  String?
+  clientId    String?
+  notes       String?
+  agencyId    String?
+
+  client Client? @relation(fields: [clientId], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([clientId])
+  @@index([agencyId])
+}
+
+model Timesheet {
+  id          String   @id @default(cuid())
+  userId      String
+  projectId   String?
+  taskId      String?
+  date        DateTime
+  hoursWorked Float
+  description String?
+  status      String   @default("draft") // draft, submitted, approved, rejected
+  notes       String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@index([projectId])
+  @@index([taskId])
+}
+
+model CalendarEvent {
+  id          String   @id @default(cuid())
+  title       String
+  description String?
+  startTime   DateTime
+  endTime     DateTime
+  location    String?
+  attendees   String[] // JSON array of email addresses
+  eventType   String   @default("meeting") // meeting, deadline, reminder, other
+  status      String   @default("scheduled") // scheduled, completed, cancelled
+  createdBy   String?
+  notes       String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([createdBy])
+}
+
+model ActivityLog {
+  id           String  @id @default(cuid())
+  userId       String
+  userName     String
+  action       String?
+  description  String?
+  resourceType String?
+  resourceId   String?
+  ipAddress    String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+}

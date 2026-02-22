@@ -12,10 +12,6 @@ export async function GET(request: NextRequest) {
 
     const timesheets = await prisma.timesheet.findMany({
       where,
-      include: {
-        user: true,
-        project: true,
-      },
       orderBy: { date: 'desc' },
     });
 
